@@ -1,3 +1,12 @@
+# Project
+*.temp
+*.tmp
+temp/
+tmp/
+test*.py
+test/
+.vscode/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
