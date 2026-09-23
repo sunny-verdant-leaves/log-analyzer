@@ -1,4 +1,6 @@
 """
+服务器日志分析器 
+Bilibili@碧叶晴天呀 设计
 程序入口
 """
 import flet as ft

@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional, Tuple
 import importlib.util
 import sys
 import inspect
-import uuid
+import hashlib
 
 
 # ==================== 插件接口定义 ====================
@@ -183,15 +183,11 @@ class PluginManager:
         从单个 .py 文件加载插件
         :return: (是否成功, 状态消息)
         """
-        if not file_path.suffix == '.py':
+        if file_path.suffix != '.py':
             return False, f"{file_path.name} 不是 Python 文件"
 
         try:
-            unique_name = f"{file_path.stem}_{uuid.uuid4().hex[:8]}"
-            spec = importlib.util.spec_from_file_location(unique_name, file_path)
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[unique_name] = module
-            spec.loader.exec_module(module)
+            module = self._load_module_from_path(file_path)
 
             loaded_names = []
             module_base = getattr(module, 'LogAnalysisPlugin', None)
@@ -255,14 +251,27 @@ class PluginManager:
         return self.load_from_folder()
 
     # ---------- 内部辅助方法 ----------
+    def _load_module_from_path(self, file_path: Path):
+        """
+        从文件加载模块，使用固定模块名避免 sys.modules 堆积。
+        同一路径重复加载会覆盖旧模块，不会残留僵尸模块。
+        """
+        path_hash = hashlib.md5(str(file_path.resolve()).encode()).hexdigest()[:8]
+        module_name = f"_log_plugin_{file_path.stem}_{path_hash}"
+
+        # 清理上一次加载的同路径模块
+        sys.modules.pop(module_name, None)
+
+        spec = importlib.util.spec_from_file_location(module_name, file_path)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return module
+
     def _load_one_file_internal(self, file_path: Path) -> Tuple[bool, str]:
         """内部使用的单文件加载（不清理已有外部插件，不触发 sync）"""
         try:
-            unique_name = f"{file_path.stem}_{uuid.uuid4().hex[:8]}"
-            spec = importlib.util.spec_from_file_location(unique_name, file_path)
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[unique_name] = module
-            spec.loader.exec_module(module)
+            module = self._load_module_from_path(file_path)
 
             loaded_names = []
             module_base = getattr(module, 'LogAnalysisPlugin', None)
@@ -301,7 +310,7 @@ class PluginManager:
         try:
             if issubclass(obj, LogAnalysisPlugin) and obj is not LogAnalysisPlugin:
                 return True
-        except:
+        except Exception:
             pass
 
         # 检测2：继承自模块内部基类
@@ -309,7 +318,7 @@ class PluginManager:
             try:
                 if issubclass(obj, module_base):
                     return True
-            except:
+            except Exception:
                 pass
 
         # 检测3：鸭子类型

@@ -20,6 +20,12 @@ class LogAnalyzerApp:
         # 插件管理器（新抽取的）
         self.plugin_manager = PluginManager()
 
+        # Ref 从类属性改为实例属性，避免多实例共享
+        self.refresh_btn_ref = ft.Ref[ft.ElevatedButton]()
+        self.refresh_plugin_btn_ref = ft.Ref[ft.ElevatedButton]()
+        self.current_file_ref = ft.Ref[ft.Text]()
+        self.run_analysis_btn_ref = ft.Ref[ft.ElevatedButton]()
+
     def main(self, page: ft.Page):
         page.title = "日志分析工具"
         page.theme_mode = ft.ThemeMode.DARK
@@ -79,11 +85,6 @@ class LogAnalyzerApp:
         )
 
     # ==================== UI 构建 ====================
-    refresh_btn_ref = ft.Ref[ft.ElevatedButton]()
-    refresh_plugin_btn_ref = ft.Ref[ft.ElevatedButton]()
-    current_file_ref = ft.Ref[ft.Text]()
-    run_analysis_btn_ref = ft.Ref[ft.ElevatedButton]()
-
     def _build_left_panel(self) -> ft.Container:
         """构建左侧面板：文件夹选择、插件文件夹选择和日志列表"""
         return ft.Container(
